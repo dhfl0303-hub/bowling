@@ -86,12 +86,12 @@ body {
 
 .team-chip .chip-name {
   font-family: 'Jua', sans-serif;
-  font-size: 13px;
+  font-size: 26px;
   margin-bottom: 2px;
 }
 
 .team-chip .chip-pos {
-  font-size: 16px;
+  font-size: 24px;
   font-weight: 900;
   color: #fff;
 }
@@ -240,11 +240,13 @@ body {
 }
 
 .token {
-  width: 21px;
-  height: 21px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
-  border: 2px solid rgba(255,255,255,0.6);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
   flex-shrink: 0;
 }
 
@@ -608,6 +610,7 @@ const MISSION_MAP = {
 let positions = [0, 0];
 let currentTeam = 0;
 let teamData = [{ strikeStreak: 0 }, { strikeStreak: 0 }];
+let turnCounts = [0, 0];
 let turnChangePending = false;
 
 // ── 보드 생성 ──
@@ -673,6 +676,8 @@ function buildBoard() {
   renderTokens();
 }
 
+const TEAM_TOKENS = ['🎳', '🎯'];
+
 function renderTokens() {
   document.querySelectorAll('.tokens').forEach(t => t.innerHTML = '');
   positions.forEach((pos, i) => {
@@ -680,7 +685,7 @@ function renderTokens() {
     if (container) {
       const token = document.createElement('div');
       token.className = 'token';
-      token.style.background = TEAMS[i].color;
+      token.textContent = TEAM_TOKENS[i];
       container.appendChild(token);
     }
   });
@@ -694,14 +699,19 @@ function buildTeamBar() {
     chip.className = 'team-chip' + (i === currentTeam ? ' active-team' : '');
     chip.id = `chip-${i}`;
     chip.style.color = team.color;
+    const turnColor = i === 0 ? '#ff4444' : '#00cfff';
     chip.innerHTML = `
       <div class="chip-name">${team.name}</div>
-      <div class="chip-pos" id="chip-pos-${i}">${positions[i] === 0 ? 'START' : positions[i]}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:0 4px;">
+        <div class="chip-pos" id="chip-pos-${i}" style="color:#fff;">${positions[i] === 0 ? 'START' : positions[i]}</div>
+        <div id="chip-turn-${i}" style="font-size:21px;font-weight:700;color:${turnColor};">${turnCounts[i]}턴</div>
+      </div>
       <div class="chip-bar"><div class="chip-fill" id="chip-fill-${i}" style="width:${positions[i]/TOTAL*100}%;background:${team.color}"></div></div>
     `;
     bar.appendChild(chip);
   });
 }
+
 
 function updateTeamBar() {
   TEAMS.forEach((team, i) => {
@@ -712,6 +722,8 @@ function updateTeamBar() {
     }
     const pos = document.getElementById(`chip-pos-${i}`);
     if (pos) pos.textContent = positions[i] === 0 ? 'START' : positions[i];
+    const turn = document.getElementById(`chip-turn-${i}`);
+    if (turn) turn.textContent = `${turnCounts[i]}턴`;
     const fill = document.getElementById(`chip-fill-${i}`);
     if (fill) fill.style.width = `${positions[i]/TOTAL*100}%`;
   });
@@ -774,6 +786,7 @@ function move(steps, label) {
 }
 
 function nextTurn() {
+  turnCounts[currentTeam]++;
   currentTeam = (currentTeam + 1) % TEAMS.length;
   updateTeamBar();
 }
@@ -999,6 +1012,7 @@ function resetGame() {
   positions = [0,0]; 
   currentTeam = 0;
   teamData = [{ strikeStreak: 0 }, { strikeStreak: 0 }];
+  turnCounts = [0, 0];
   document.getElementById('winOverlay').classList.remove('show');
   document.getElementById('overlay').classList.remove('show');
   buildBoard();
