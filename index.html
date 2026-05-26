@@ -1,0 +1,1007 @@
+
+ <!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🎳 볼링 뱀사다리 (4vs4 팀전)</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;700;900&display=swap');
+
+:root {
+  --a: #ff6b35;
+  --b: #00d4aa;
+  --c: #ffd700;
+  --d: #c084fc;
+  --snake: #ff3a3a;
+  --ladder: #39d353;
+  --mission: #3b9eff;
+  --bg: #0e0e16;
+  --card: #16161f;
+  --border: #2a2a3a;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+body {
+  background: var(--bg);
+  font-family: 'Noto Sans KR', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── 상단 고정 영역 묶음 ── */
+.sticky-top-group {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+
+/* ── 헤더 ── */
+.header {
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header-title {
+  font-family: 'Jua', sans-serif;
+  font-size: 18px;
+  color: #fff;
+  letter-spacing: 1px;
+}
+
+.turn-badge {
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: 'Jua', sans-serif;
+}
+
+/* ── 팀 순위 바 ── */
+.team-bar {
+  display: flex;
+  gap: 6px;
+  padding: 10px 12px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+
+.team-chip {
+  flex: 1;
+  background: #1e1e2e;
+  border-radius: 10px;
+  padding: 8px 6px;
+  text-align: center;
+  border: 2px solid transparent;
+  transition: border-color 0.3s;
+}
+
+.team-chip.active-team { border-color: currentColor; }
+
+.team-chip .chip-name {
+  font-family: 'Jua', sans-serif;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.team-chip .chip-pos {
+  font-size: 16px;
+  font-weight: 900;
+  color: #fff;
+}
+
+.team-chip .chip-bar {
+  height: 4px;
+  background: #2a2a3a;
+  border-radius: 2px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.team-chip .chip-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.8s cubic-bezier(.4,0,.2,1);
+}
+
+/* ── 범례 ── */
+.legend {
+  display: flex;
+  gap: 12px;
+  padding: 8px 14px;
+  background: #12121a;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: #666;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+/* ── 보드 ── */
+.board-wrap {
+  padding: 12px;
+  overflow-y: auto;
+}
+
+.board {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.board-row {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 3px;
+}
+
+.cell {
+  aspect-ratio: 1;
+  border-radius: 6px;
+  background: #1a1a28;
+  border: 1px solid #252535;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 2px;
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  overflow: hidden;
+}
+
+.cell:active { transform: scale(0.92); }
+
+.cell-num {
+  font-size: 35px;
+  color: #4a4a6f;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.cell.snake-cell {
+  background: #2d0d0d;
+  border-color: #ff3a3a44;
+}
+
+.cell.ladder-cell {
+  background: #0d2d12;
+  border-color: #39d35344;
+}
+
+.cell.mission-cell {
+  background: #0d1a2d;
+  border-color: #3b9eff44;
+}
+
+.cell.start-cell {
+  background: linear-gradient(135deg, #1e293b, #0f172a);
+  border-color: #3b9eff66;
+}
+
+.start-text {
+  font-family: 'Jua', sans-serif;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  background: linear-gradient(135deg, #3b9eff, #00d4ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: none;
+  line-height: 1.2;
+  margin-top: 4px;
+}
+
+.cell.goal-cell {
+  background: linear-gradient(135deg, #2d2200, #1a1a00);
+  border-color: #ffd70066;
+  animation: goalPulse 2s infinite;
+}
+
+@keyframes goalPulse {
+  0%,100% { box-shadow: 0 0 0 0 #ffd70033; }
+  50% { box-shadow: 0 0 0 4px #ffd70011; }
+}
+
+.cell-icon {
+  font-size: 50px;
+  line-height: 1;
+}
+
+.tokens {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  position: absolute;
+  bottom: 6px;
+  left: 0;
+  right: 0;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.token {
+  width: 21px;
+  height: 21px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.6);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  flex-shrink: 0;
+}
+
+/* ── 입력 영역 ── */
+.input-area {
+  position: sticky;
+  bottom: 0;
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  padding: 12px 14px;
+  z-index: 40;
+}
+
+.input-label {
+  font-size: 12px;
+  color: #aaa;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.input-label span { color: #fff; font-weight: 700; font-size: 14px; }
+
+.pin-grid {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 5px;
+  margin-bottom: 8px;
+}
+
+.pin-btn {
+  padding: 12px 2px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #1e1e2e;
+  color: #fff;
+  font-family: 'Jua', sans-serif;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.15s;
+  text-align: center;
+}
+
+.pin-btn:active { background: #2a2a3e; }
+
+.special-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.special-btn {
+  padding: 12px 4px;
+  border-radius: 8px;
+  border: none;
+  color: #fff;
+  font-family: 'Jua', sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: center;
+  transition: opacity 0.15s;
+}
+
+.special-btn:active { opacity: 0.7; }
+.btn-strike { background: linear-gradient(135deg, #ff6b35, #ff9500); }
+.btn-spare  { background: linear-gradient(135deg, #00b4d8, #0077b6); }
+.btn-gutter { background: linear-gradient(135deg, #555, #333); }
+.btn-split  { background: linear-gradient(135deg, #a855f7, #7c3aed); }
+.btn-reset  { background: linear-gradient(135deg, #374151, #1f2937); }
+
+/* ── 팝업 ── */
+.overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  z-index: 100;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.overlay.show { display: flex; }
+
+.popup {
+  background: var(--card);
+  border-radius: 20px 20px 0 0;
+  padding: 20px 20px 30px;
+  width: 100%;
+  max-width: 480px;
+  border-top: 1px solid var(--border);
+  animation: slideUp 0.3s cubic-bezier(.4,0,.2,1);
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity:0; }
+  to   { transform: translateY(0);    opacity:1; }
+}
+
+.popup-handle {
+  width: 36px;
+  height: 4px;
+  background: #333;
+  border-radius: 2px;
+  margin: 0 auto 16px;
+}
+
+.popup-icon { font-size: 36px; text-align: center; margin-bottom: 8px; }
+.popup-title {
+  font-family: 'Jua', sans-serif;
+  font-size: 20px;
+  text-align: center;
+  margin-bottom: 6px;
+  color: #fff;
+}
+
+.popup-sub {
+  font-size: 12px;
+  color: #888;
+  text-align: center;
+  margin-bottom: 16px;
+  line-height: 1.6;
+}
+
+.popup-mission {
+  background: #1a1a2e;
+  border-radius: 12px;
+  padding: 14px;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 16px;
+  border: 1px solid #3b9eff33;
+  line-height: 1.5;
+}
+
+.popup-move {
+  background: #1e1e2e;
+  border-radius: 10px;
+  padding: 12px;
+  text-align: center;
+  margin-bottom: 14px;
+}
+
+.popup-move .move-num {
+  font-family: 'Jua', sans-serif;
+  font-size: 28px;
+}
+
+.popup-move .move-label { font-size: 11px; color: #666; }
+
+.popup-btn {
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  border: none;
+  font-family: 'Jua', sans-serif;
+  font-size: 16px;
+  cursor: pointer;
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+.popup-btn.confirm { background: linear-gradient(135deg, #3b9eff, #1d4ed8); }
+.popup-btn.close-btn { background: #1e1e2e; color: #666; font-size: 14px; }
+
+/* 이동 애니메이션 */
+.cell.bounce {
+  animation: bounce 0.4s ease;
+}
+
+@keyframes bounce {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.3); }
+  70%  { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+
+/* 이벤트 토스트 */
+.toast {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1e1e2e;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  z-index: 200;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.toast.show { opacity: 1; }
+
+/* 승리 화면 */
+.win-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.9);
+  z-index: 300;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  text-align: center;
+  padding: 30px;
+}
+
+.win-overlay.show { display: flex; }
+
+.win-icon { font-size: 60px; margin-bottom: 12px; animation: spin 1s ease; }
+@keyframes spin { from { transform: rotate(-30deg) scale(0); } to { transform: rotate(0) scale(1); } }
+
+.win-title {
+  font-family: 'Jua', sans-serif;
+  font-size: 32px;
+  color: #ffd700;
+  margin-bottom: 8px;
+}
+
+.win-sub { font-size: 15px; color: #aaa; margin-bottom: 30px; }
+
+.win-btn {
+  padding: 14px 32px;
+  border-radius: 14px;
+  border: none;
+  background: linear-gradient(135deg, #ff6b35, #ff9500);
+  color: #fff;
+  font-family: 'Jua', sans-serif;
+  font-size: 18px;
+  cursor: pointer;
+}
+</style>
+</head>
+<body>
+
+<div class="sticky-top-group">
+  <div class="header">
+    <div class="header-title">🎳 볼링 뱀사다리 (팀전)</div>
+    <div class="turn-badge" id="turnBadge">팀 A 차례</div>
+  </div>
+
+  <div class="team-bar" id="teamBar"></div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#ff3a3a"></div>뱀 (뒤로)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#39d353"></div>사다리 (앞으로)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#3b9eff"></div>미션</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ffd700"></div>골인</div>
+  </div>
+</div>
+
+<div class="board-wrap">
+  <div class="board" id="board"></div>
+</div>
+
+<div class="input-area">
+  <div class="input-label">일반 (1~9핀) 입력 ➡️ <span id="currentTeamLabel">팀 A</span> (핀 수만큼 뒤로 차감)</div>
+  <div class="pin-grid">
+    <button class="pin-btn" onclick="addPin(1)">1</button>
+    <button class="pin-btn" onclick="addPin(2)">2</button>
+    <button class="pin-btn" onclick="addPin(3)">3</button>
+    <button class="pin-btn" onclick="addPin(4)">4</button>
+    <button class="pin-btn" onclick="addPin(5)">5</button>
+    <button class="pin-btn" onclick="addPin(6)">6</button>
+    <button class="pin-btn" onclick="addPin(7)">7</button>
+    <button class="pin-btn" onclick="addPin(8)">8</button>
+    <button class="pin-btn" onclick="addPin(9)">9</button>
+  </div>
+  <div class="special-grid">
+    <button class="special-btn btn-strike" onclick="doSpecial('strike')">🎯 스트라이크 (+11)</button>
+    <button class="special-btn btn-spare"  onclick="doSpecial('spare')">✌️ 스페어 (+10)</button>
+    <button class="special-btn btn-split"  onclick="doSpecial('split')">💥 스플릿 (+20)</button>
+    <button class="special-btn btn-gutter" onclick="doSpecial('gutter')">🕳️ 거터 (-5)</button>
+    <button class="special-btn btn-reset"  onclick="resetGame()">🔄 게임 리셋</button>
+  </div>
+</div>
+
+<div class="overlay" id="overlay" onclick="closePopup(event)">
+  <div class="popup" id="popup">
+    <div class="popup-handle"></div>
+    <div class="popup-icon" id="popupIcon"></div>
+    <div class="popup-title" id="popupTitle"></div>
+    <div class="popup-sub" id="popupSub"></div>
+    <div class="popup-mission" id="popupMission" style="display:none"></div>
+    <div class="popup-move" id="popupMove" style="display:none">
+      <div class="move-num" id="popupMoveNum"></div>
+      <div class="move-label" id="popupMoveLabel"></div>
+    </div>
+    <button class="popup-btn confirm" id="popupConfirm" onclick="closePopup(null)" style="display:none">✓ 미션 완료 확인</button>
+    <button class="popup-btn close-btn" onclick="closePopup(null)">닫기</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="win-overlay" id="winOverlay">
+  <div class="win-icon">🏆</div>
+  <div class="win-title" id="winTitle"></div>
+  <div class="win-sub" id="winSub"></div>
+  <button class="win-btn" onclick="resetGame()">🔄 다시 시작</button>
+</div>
+
+<script>
+// ── 설정 ──
+const TOTAL = 200;
+const TEAMS = [
+  { name:'팀 A', color:'#ff6b35', key:'a' },
+  { name:'팀 B', color:'#00d4aa', key:'b' },
+];
+
+// 뱀 설정
+const SNAKES = {
+  37:17, 44:22, 63:41, 78:52, 95:70,
+  113:58, 131:105, 149:120, 168:140, 185:160,
+  198:148
+};
+
+// 사다리 설정
+const LADDERS = {
+  8:38, 18:45, 35:60, 55:85, 72:100,
+  90:118, 108:135, 125:155, 145:172, 162:190
+};
+
+// 미션 칸 (10의 배수)
+const MISSION_CELLS = [10,20,30,40,50,60,70,80,90,100,110,120,130,140,150,160,170,180,190,200];
+
+// 칸별 미션 (성공: +3칸, 실패: -4칸 기본)
+const MISSION_MAP = {
+  10:  { text: "5번 핀 남기기 🎳",                          success: 3, fail: -4 },
+  20:  { text: "하우스볼로 스트라이크 치기 🎯",              success: 3, fail: -4 },
+  30:  { text: "1프레임 노스텝 도전 🧍",                     success: 3, fail: -4 },
+  40:  { text: "1프레임 하우스볼 도전 🏠",                   success: 3, fail: -4 },
+  50:  { text: "노핑거 하우스볼 도전 🤙",                    success: 3, fail: -4 },
+  60:  { text: "7번·10번 초구 처리\n(반대손 or 소프트볼) 🎳", success: 3, fail: -4 },
+  70:  { text: "미션 준비 중... 🔧",  success: 3, fail: -4 },
+  80:  { text: "미션 준비 중... 🔧",  success: 3, fail: -4 },
+  90:  { text: "미션 준비 중... 🔧",  success: 3, fail: -4 },
+  100: { text: "미션 준비 중... 🔧",  success: 3, fail: -4 },
+  110: { text: "미션 준비 중... 🔧",  success: 3, fail: -4 },
+  120: { text: "미션 준비 중... 🔧",  success: 3, fail: -4 },
+  130: { text: "미션 준비 중... 🔧",  success: 3, fail: -4 },
+  140: { text: "미션 준비 중... 🔧",  success: 3, fail: -4 },
+  150: { text: "미션 준비 중... 🔧",  success: 3, fail: -4 },
+  160: { text: "미션 준비 중... 🔧",  success: 3, fail: -4 },
+  170: { text: "미션 준비 중... 🔧",  success: 3, fail: -4 },
+  180: { text: "미션 준비 중... 🔧",  success: 3, fail: -4 },
+  190: { text: "미션 준비 중... 🔧",  success: 3, fail: -4 },
+  200: { text: "미션 준비 중... 🔧",  success: 3, fail: -4 },
+};
+
+// ── 상태 ──
+let positions = [0, 0];
+let currentTeam = 0;
+let teamData = [{ strikeStreak: 0 }, { strikeStreak: 0 }];
+let turnChangePending = false;
+
+// ── 보드 생성 ──
+function buildBoard() {
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  
+  // 19→0 순서로 그려서 190~199+GOAL이 맨 위, 0~9가 맨 아래
+  for (let rowIdx = 19; rowIdx >= 0; rowIdx--) {
+    const rowDiv = document.createElement('div');
+    rowDiv.className = 'board-row';
+
+    const startNum = rowIdx * 10;
+    for (let colIdx = 0; colIdx < 10; colIdx++) {
+      const num = startNum + colIdx;
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.id = `cell-${num}`;
+      cell.onclick = () => onCellClick(num);
+
+      if (num === 0) {
+        cell.classList.add('start-cell');
+        cell.innerHTML = `
+          <div class="start-text">START</div>
+          <div class="tokens" id="tokens-0"></div>
+        `;
+      } else {
+        let icon = '';
+        if (SNAKES[num])   { cell.classList.add('snake-cell');   icon = '🐍'; }
+        if (LADDERS[num])  { cell.classList.add('ladder-cell');  icon = '🪜'; }
+        if (MISSION_CELLS.includes(num)) { cell.classList.add('mission-cell'); icon = '📋'; }
+
+        cell.innerHTML = `
+          <div class="cell-num">${num}</div>
+          ${icon ? `<div class="cell-icon">${icon}</div>` : ''}
+          <div class="tokens" id="tokens-${num}"></div>
+        `;
+      }
+      rowDiv.appendChild(cell);
+    }
+
+    // 190~199 줄 맨 끝에 GOAL 추가
+    if (rowIdx === 19) {
+      const goalCell = document.createElement('div');
+      goalCell.className = 'cell goal-cell';
+      goalCell.id = `cell-${TOTAL}`;
+      goalCell.onclick = () => onCellClick(TOTAL);
+      goalCell.innerHTML = `<div style="font-family:'Jua',sans-serif;font-size:14px;color:#ffd700;font-weight:900;letter-spacing:1px;">GOAL</div><div class="tokens" id="tokens-${TOTAL}"></div>`;
+      rowDiv.appendChild(goalCell);
+      rowDiv.style.gridTemplateColumns = 'repeat(11, 1fr)';
+    }
+
+    board.appendChild(rowDiv);
+  }
+  
+  renderTokens();
+}
+
+function renderTokens() {
+  document.querySelectorAll('.tokens').forEach(t => t.innerHTML = '');
+  positions.forEach((pos, i) => {
+    const container = document.getElementById(`tokens-${pos}`);
+    if (container) {
+      const token = document.createElement('div');
+      token.className = 'token';
+      token.style.background = TEAMS[i].color;
+      container.appendChild(token);
+    }
+  });
+}
+
+function buildTeamBar() {
+  const bar = document.getElementById('teamBar');
+  bar.innerHTML = '';
+  TEAMS.forEach((team, i) => {
+    const chip = document.createElement('div');
+    chip.className = 'team-chip' + (i === currentTeam ? ' active-team' : '');
+    chip.id = `chip-${i}`;
+    chip.style.color = team.color;
+    chip.innerHTML = `
+      <div class="chip-name">${team.name}</div>
+      <div class="chip-pos" id="chip-pos-${i}">${positions[i] === 0 ? 'START' : positions[i]}</div>
+      <div class="chip-bar"><div class="chip-fill" id="chip-fill-${i}" style="width:${positions[i]/TOTAL*100}%;background:${team.color}"></div></div>
+    `;
+    bar.appendChild(chip);
+  });
+}
+
+function updateTeamBar() {
+  TEAMS.forEach((team, i) => {
+    const chip = document.getElementById(`chip-${i}`);
+    if (chip) {
+      chip.className = 'team-chip' + (i === currentTeam ? ' active-team' : '');
+      chip.style.color = team.color;
+    }
+    const pos = document.getElementById(`chip-pos-${i}`);
+    if (pos) pos.textContent = positions[i] === 0 ? 'START' : positions[i];
+    const fill = document.getElementById(`chip-fill-${i}`);
+    if (fill) fill.style.width = `${positions[i]/TOTAL*100}%`;
+  });
+
+  const badge = document.getElementById('turnBadge');
+  badge.textContent = `${TEAMS[currentTeam].name} 차례`;
+  badge.style.background = TEAMS[currentTeam].color + '33';
+  badge.style.color = TEAMS[currentTeam].color;
+  badge.style.border = `1px solid ${TEAMS[currentTeam].color}55`;
+
+  document.getElementById('currentTeamLabel').textContent = TEAMS[currentTeam].name;
+  document.getElementById('currentTeamLabel').style.color = TEAMS[currentTeam].color;
+}
+
+function move(steps, label) {
+  if (steps === 0) { nextTurn(); return; }
+
+  const team = currentTeam;
+  let newPos = positions[team] + steps;
+  if (newPos < 0) newPos = 0; 
+  if (newPos >= TOTAL) { newPos = TOTAL; }
+
+  positions[team] = newPos;
+  renderTokens();
+
+  const cell = document.getElementById(`cell-${newPos}`);
+  if (cell) {
+    cell.classList.add('bounce');
+    setTimeout(() => cell.classList.remove('bounce'), 400);
+  }
+
+  const currentDisplayPos = newPos === 0 ? 'START' : `${newPos}칸`;
+  showToast(`${TEAMS[team].name} ${steps > 0 ? '+' : ''}${steps}칸 → ${currentDisplayPos}`);
+  updateTeamBar();
+
+  if (newPos >= TOTAL) {
+    setTimeout(() => showWin(team), 500);
+    return;
+  }
+
+  setTimeout(() => {
+    if (SNAKES[newPos]) {
+      const dest = SNAKES[newPos];
+      positions[team] = dest;
+      renderTokens();
+      updateTeamBar();
+      showPopup('snake', newPos, dest);
+    } else if (LADDERS[newPos]) {
+      const dest = LADDERS[newPos];
+      positions[team] = dest;
+      renderTokens();
+      updateTeamBar();
+      showPopup('ladder', newPos, dest);
+    } else if (MISSION_CELLS.includes(newPos)) {
+      showPopup('mission', newPos, null);
+    } else {
+      nextTurn();
+    }
+  }, 600);
+}
+
+function nextTurn() {
+  currentTeam = (currentTeam + 1) % TEAMS.length;
+  updateTeamBar();
+}
+
+function addPin(n) {
+  teamData[currentTeam].strikeStreak = 0;
+  move(-n, `${n}핀 오픈프레임 -${n}`);
+}
+
+function doSpecial(type) {
+  let steps = 0;
+  let streak = teamData[currentTeam].strikeStreak;
+
+  if (type === 'strike') {
+    streak++;
+    teamData[currentTeam].strikeStreak = streak;
+    
+    if (streak === 1) {
+      steps = 11;
+      move(steps, `🎯 스트라이크! +${steps}`);
+    } else if (streak === 2) {
+      steps = 12;
+      move(steps, `🎳 더블!! +${steps}`);
+    } else {
+      steps = 12 + ((streak - 2) * 2);
+      let streakName = streak === 3 ? '🔥 터키!!!' : `⚡ ${streak}연속 스트라이크!!!!`;
+      move(steps, `${streakName} +${steps}`);
+    }
+  } else {
+    teamData[currentTeam].strikeStreak = 0;
+    if (type === 'spare')  move(10, '✌️ 스페어 +10');
+    if (type === 'split')  move(20, '💥 스플릿 +20');
+    if (type === 'gutter') move(-5, '🕳️ 거터 -5');
+  }
+}
+
+function showPopup(type, from, to) {
+  const overlay = document.getElementById('overlay');
+  const icon = document.getElementById('popupIcon');
+  const title = document.getElementById('popupTitle');
+  const sub = document.getElementById('popupSub');
+  const mission = document.getElementById('popupMission');
+  const moveDiv = document.getElementById('popupMove');
+  const moveNum = document.getElementById('popupMoveNum');
+  const moveLabel = document.getElementById('popupMoveLabel');
+  const confirm = document.getElementById('popupConfirm');
+
+  mission.style.display = 'none';
+  confirm.style.display = 'none';
+  moveDiv.style.display = 'none';
+  turnChangePending = false;
+
+  const displayFrom = from === 0 ? 'START' : from;
+  const displayTo = to === 0 ? 'START' : to;
+
+  if (type === 'snake') {
+    icon.textContent = '🐍';
+    title.textContent = '뱀 등장!';
+    sub.textContent = `${TEAMS[currentTeam].name}이(가) 뱀을 밟았습니다`;
+    moveDiv.style.display = 'block';
+    moveNum.textContent = `${displayFrom} → ${displayTo}`;
+    moveNum.style.color = '#ff3a3a';
+    moveLabel.textContent = `${to - from}칸 뒤로`;
+    turnChangePending = true;
+  } else if (type === 'ladder') {
+    icon.textContent = '🪜';
+    title.textContent = '사다리 발견!';
+    sub.textContent = `${TEAMS[currentTeam].name}이(가) 사다리를 탔습니다`;
+    moveDiv.style.display = 'block';
+    moveNum.textContent = `${displayFrom} → ${displayTo}`;
+    moveNum.style.color = '#39d353';
+    moveLabel.textContent = `+${to - from}칸 앞으로`;
+    turnChangePending = true;
+  } else if (type === 'mission') {
+    const missionData = MISSION_MAP[from] || { text: "미션 준비 중... 🔧", success: 3, fail: -4 };
+    icon.textContent = '📋';
+    title.textContent = `${from}번 칸 미션!`;
+    sub.textContent = '';
+
+    // 성공/실패 버튼 동적 생성
+    let existing = document.getElementById('missionBtns');
+    if (existing) existing.remove();
+    const btnWrap = document.createElement('div');
+    btnWrap.id = 'missionBtns';
+    btnWrap.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;';
+
+    const successBtn = document.createElement('button');
+    successBtn.className = 'popup-btn';
+    successBtn.style.cssText = 'background:linear-gradient(135deg,#22c55e,#16a34a);margin-bottom:0;';
+    successBtn.innerHTML = `⭕ 미션 성공 (+${missionData.success}칸)`;
+    successBtn.onclick = () => {
+      document.getElementById('missionBtns').remove();
+      closePopup(null);
+      move(missionData.success, `✅ 미션 성공 +${missionData.success}칸`);
+    };
+
+    const failBtn = document.createElement('button');
+    failBtn.className = 'popup-btn';
+    failBtn.style.cssText = 'background:linear-gradient(135deg,#ef4444,#b91c1c);margin-bottom:0;';
+    failBtn.innerHTML = `✖ 미션 실패 (${missionData.fail}칸)`;
+    failBtn.onclick = () => {
+      document.getElementById('missionBtns').remove();
+      closePopup(null);
+      move(missionData.fail, `❌ 미션 실패 ${missionData.fail}칸`);
+    };
+
+    btnWrap.appendChild(successBtn);
+    btnWrap.appendChild(failBtn);
+    const closeB = document.getElementById('popup').querySelector('.close-btn');
+    document.getElementById('popup').insertBefore(btnWrap, closeB);
+    turnChangePending = false;
+  }
+
+  overlay.classList.add('show');
+}
+
+function onCellClick(num) {
+  const overlay = document.getElementById('overlay');
+  const icon = document.getElementById('popupIcon');
+  const title = document.getElementById('popupTitle');
+  const sub = document.getElementById('popupSub');
+  const mission = document.getElementById('popupMission');
+  const moveDiv = document.getElementById('popupMove');
+
+  mission.style.display = 'none';
+  moveDiv.style.display = 'none';
+
+  if (num === TOTAL) {
+    icon.textContent = '🏁'; title.textContent = '골 지점!';
+    sub.textContent = '200칸에 먼저 도달하는 팀이 승리합니다!';
+  } else if (num === 0) {
+    icon.textContent = '🚀'; title.textContent = '시작 지점 — START';
+    const here = TEAMS.filter((_, i) => positions[i] === 0).map(t => t.name).join(', ');
+    sub.textContent = here ? `현재 대기 팀: ${here}` : '게임이 시작되는 대기 칸입니다.';
+  } else if (SNAKES[num]) {
+    icon.textContent = '🐍'; title.textContent = `${num}번 칸 — 뱀`;
+    sub.textContent = `이 칸을 밟으면 ${SNAKES[num] === 0 ? 'START' : SNAKES[num] + '번'} 칸으로 내려갑니다`;
+    moveDiv.style.display = 'block';
+    document.getElementById('popupMoveNum').textContent = `${num} → ${SNAKES[num] === 0 ? 'START' : SNAKES[num]}`;
+    document.getElementById('popupMoveNum').style.color = '#ff3a3a';
+    document.getElementById('popupMoveLabel').textContent = `${SNAKES[num]-num}칸`;
+  } else if (LADDERS[num]) {
+    icon.textContent = '🪜'; title.textContent = `${num}번 칸 — 사다리`;
+    sub.textContent = `이 칸을 밟으면 ${LADDERS[num]}번 칸으로 올라갑니다`;
+    moveDiv.style.display = 'block';
+    document.getElementById('popupMoveNum').textContent = `${num} → ${LADDERS[num]}`;
+    document.getElementById('popupMoveNum').style.color = '#39d353';
+    document.getElementById('popupMoveLabel').textContent = `+${LADDERS[num]-num}칸`;
+  } else if (MISSION_CELLS.includes(num)) {
+    const missionData = MISSION_MAP[num] || { text: "미션 준비 중... 🔧", success: 3, fail: -4 };
+    icon.textContent = '📋';
+    title.textContent = `${num}번 칸 미션!`;
+    sub.textContent = '';
+    mission.style.display = 'block';
+    mission.textContent = missionData.text;
+
+    let existing = document.getElementById('missionBtns');
+    if (existing) existing.remove();
+    const btnWrap = document.createElement('div');
+    btnWrap.id = 'missionBtns';
+    btnWrap.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;';
+
+    const successBtn = document.createElement('button');
+    successBtn.className = 'popup-btn';
+    successBtn.style.cssText = 'background:linear-gradient(135deg,#22c55e,#16a34a);margin-bottom:0;';
+    successBtn.innerHTML = `⭕ 미션 성공 (+${missionData.success}칸)`;
+    successBtn.onclick = () => {
+      document.getElementById('missionBtns').remove();
+      closePopup(null);
+      move(missionData.success, `✅ 미션 성공 +${missionData.success}칸`);
+    };
+
+    const failBtn = document.createElement('button');
+    failBtn.className = 'popup-btn';
+    failBtn.style.cssText = 'background:linear-gradient(135deg,#ef4444,#b91c1c);margin-bottom:0;';
+    failBtn.innerHTML = `✖ 미션 실패 (${missionData.fail}칸)`;
+    failBtn.onclick = () => {
+      document.getElementById('missionBtns').remove();
+      closePopup(null);
+      move(missionData.fail, `❌ 미션 실패 ${missionData.fail}칸`);
+    };
+
+    btnWrap.appendChild(successBtn);
+    btnWrap.appendChild(failBtn);
+    const closeB = document.getElementById('popup').querySelector('.close-btn');
+    document.getElementById('popup').insertBefore(btnWrap, closeB);
+  } else {
+    icon.textContent = '📍'; title.textContent = `${num}번 칸`;
+    const here = TEAMS.filter((_, i) => positions[i] === num).map(t => t.name).join(', ');
+    sub.textContent = here ? `현재 위치: ${here}` : '일반 칸입니다';
+  }
+
+  overlay.classList.add('show');
+}
+
+function closePopup(e) {
+  if (e && e.target !== document.getElementById('overlay')) return;
+  document.getElementById('overlay').classList.remove('show');
+  let existing = document.getElementById('missionBtns');
+  if (existing) existing.remove();
+  if (turnChangePending) {
+    turnChangePending = false;
+    nextTurn();
+  }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+function showWin(teamIdx) {
+  const overlay = document.getElementById('winOverlay');
+  document.getElementById('winTitle').textContent = `${TEAMS[teamIdx].name} 우승! 🎉`;
+  document.getElementById('winSub').textContent = '200칸에 먼저 도달했습니다!';
+  document.getElementById('winTitle').style.color = TEAMS[teamIdx].color;
+  overlay.classList.add('show');
+}
+
+function resetGame() {
+  positions = [0,0]; 
+  currentTeam = 0;
+  teamData = [{ strikeStreak: 0 }, { strikeStreak: 0 }];
+  document.getElementById('winOverlay').classList.remove('show');
+  document.getElementById('overlay').classList.remove('show');
+  buildBoard();
+  buildTeamBar();
+  updateTeamBar();
+}
+
+buildBoard();
+buildTeamBar();
+updateTeamBar();
+</script>
+</body>
+</html>
