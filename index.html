@@ -621,8 +621,14 @@ function buildBoard() {
     rowDiv.className = 'board-row';
 
     const startNum = rowIdx * 10;
+    // 짝수 줄: 왼→오 (0,2,4...), 홀수 줄: 오→왼 (1,3,5...)
+    const cells = [];
     for (let colIdx = 0; colIdx < 10; colIdx++) {
-      const num = startNum + colIdx;
+      cells.push(startNum + colIdx);
+    }
+    if (rowIdx % 2 === 1) cells.reverse();
+
+    cells.forEach(num => {
       const cell = document.createElement('div');
       cell.className = 'cell';
       cell.id = `cell-${num}`;
@@ -647,16 +653,17 @@ function buildBoard() {
         `;
       }
       rowDiv.appendChild(cell);
-    }
+    });
 
-    // 190~199 줄 맨 끝에 GOAL 추가
+    // 190~199 줄(rowIdx 19) 맨 끝에 GOAL 추가
     if (rowIdx === 19) {
       const goalCell = document.createElement('div');
       goalCell.className = 'cell goal-cell';
       goalCell.id = `cell-${TOTAL}`;
       goalCell.onclick = () => onCellClick(TOTAL);
       goalCell.innerHTML = `<div style="font-family:'Jua',sans-serif;font-size:14px;color:#ffd700;font-weight:900;letter-spacing:1px;">GOAL</div><div class="tokens" id="tokens-${TOTAL}"></div>`;
-      rowDiv.appendChild(goalCell);
+      // 홀수줄이라 reverse됐으니 GOAL은 맨 앞에 삽입
+      rowDiv.insertBefore(goalCell, rowDiv.firstChild);
       rowDiv.style.gridTemplateColumns = 'repeat(11, 1fr)';
     }
 
