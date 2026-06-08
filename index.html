@@ -612,6 +612,8 @@ let currentTeam = 0;
 let teamData = [{ strikeStreak: 0 }, { strikeStreak: 0 }];
 let turnCounts = [0, 0];
 let turnChangePending = false;
+let finishedTeams = [];  // ✨ 완주한 팀 추적 (1등, 2등 순서)
+let isMissionActive = false;  // ✨ 미션 팝업 활성화 상태
 
 // ── 보드 생성 ──
 function buildBoard() {
@@ -759,8 +761,22 @@ function move(steps, label) {
   showToast(`${TEAMS[team].name} ${steps > 0 ? '+' : ''}${steps}칸 → ${currentDisplayPos}`);
   updateTeamBar();
 
+  // ✨ 200에 도달했는지 확인 (1등/2등 처리)
   if (newPos >= TOTAL) {
-    setTimeout(() => showWin(team), 500);
+    if (!finishedTeams.includes(team)) {
+      finishedTeams.push(team);
+    }
+    
+    const rank = finishedTeams.length === 1 ? '1등!' : '2등!';
+    showToast(`${TEAMS[team].name} ${rank}`);
+
+    // 2팀 모두 완주했으면 게임 종료
+    if (finishedTeams.length === 2) {
+      setTimeout(() => showWin(finishedTeams[0]), 500);
+    } else {
+      // 첫 팀이 도달했으니 다음 팀으로 턴 변경
+      setTimeout(() => nextTurn(), 500);
+    }
     return;
   }
 
@@ -838,6 +854,7 @@ function showPopup(type, from, to) {
   confirm.style.display = 'none';
   moveDiv.style.display = 'none';
   turnChangePending = false;
+  isMissionActive = false;  // ✨ 초기화
 
   const displayFrom = from === 0 ? 'START' : from;
   const displayTo = to === 0 ? 'START' : to;
@@ -865,6 +882,7 @@ function showPopup(type, from, to) {
     icon.textContent = '📋';
     title.textContent = `${from}번 칸 미션!`;
     sub.textContent = '';
+    isMissionActive = true;  // ✨ 미션 활성화
 
     // 성공/실패 버튼 동적 생성
     let existing = document.getElementById('missionBtns');
@@ -878,6 +896,7 @@ function showPopup(type, from, to) {
     successBtn.style.cssText = 'background:linear-gradient(135deg,#22c55e,#16a34a);margin-bottom:0;';
     successBtn.innerHTML = `⭕ 미션 성공 (+${missionData.success}칸)`;
     successBtn.onclick = () => {
+      isMissionActive = false;  // ✨ 미션 비활성화
       document.getElementById('missionBtns').remove();
       closePopup(null);
       move(missionData.success, `✅ 미션 성공 +${missionData.success}칸`);
@@ -888,6 +907,7 @@ function showPopup(type, from, to) {
     failBtn.style.cssText = 'background:linear-gradient(135deg,#ef4444,#b91c1c);margin-bottom:0;';
     failBtn.innerHTML = `✖ 미션 실패 (${missionData.fail}칸)`;
     failBtn.onclick = () => {
+      isMissionActive = false;  // ✨ 미션 비활성화
       document.getElementById('missionBtns').remove();
       closePopup(null);
       move(missionData.fail, `❌ 미션 실패 ${missionData.fail}칸`);
@@ -939,40 +959,9 @@ function onCellClick(num) {
     const missionData = MISSION_MAP[num] || { text: "미션 준비 중... 🔧", success: 3, fail: -4 };
     icon.textContent = '📋';
     title.textContent = `${num}번 칸 미션!`;
-    sub.textContent = '';
+    sub.textContent = '(게임 진행 중에 이 칸에 도착할 때 성공/실패를 선택합니다)';
     mission.style.display = 'block';
     mission.textContent = missionData.text;
-
-    let existing = document.getElementById('missionBtns');
-    if (existing) existing.remove();
-    const btnWrap = document.createElement('div');
-    btnWrap.id = 'missionBtns';
-    btnWrap.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;';
-
-    const successBtn = document.createElement('button');
-    successBtn.className = 'popup-btn';
-    successBtn.style.cssText = 'background:linear-gradient(135deg,#22c55e,#16a34a);margin-bottom:0;';
-    successBtn.innerHTML = `⭕ 미션 성공 (+${missionData.success}칸)`;
-    successBtn.onclick = () => {
-      document.getElementById('missionBtns').remove();
-      closePopup(null);
-      move(missionData.success, `✅ 미션 성공 +${missionData.success}칸`);
-    };
-
-    const failBtn = document.createElement('button');
-    failBtn.className = 'popup-btn';
-    failBtn.style.cssText = 'background:linear-gradient(135deg,#ef4444,#b91c1c);margin-bottom:0;';
-    failBtn.innerHTML = `✖ 미션 실패 (${missionData.fail}칸)`;
-    failBtn.onclick = () => {
-      document.getElementById('missionBtns').remove();
-      closePopup(null);
-      move(missionData.fail, `❌ 미션 실패 ${missionData.fail}칸`);
-    };
-
-    btnWrap.appendChild(successBtn);
-    btnWrap.appendChild(failBtn);
-    const closeB = document.getElementById('popup').querySelector('.close-btn');
-    document.getElementById('popup').insertBefore(btnWrap, closeB);
   } else {
     icon.textContent = '📍'; title.textContent = `${num}번 칸`;
     const here = TEAMS.filter((_, i) => positions[i] === num).map(t => t.name).join(', ');
@@ -983,6 +972,8 @@ function onCellClick(num) {
 }
 
 function closePopup(e) {
+  // ✨ 미션이 활성화되어 있으면 팝업을 닫지 않음 (overlay 클릭 무시)
+  if (isMissionActive) return;
   if (e && e.target !== document.getElementById('overlay')) return;
   document.getElementById('overlay').classList.remove('show');
   let existing = document.getElementById('missionBtns');
@@ -1013,6 +1004,8 @@ function resetGame() {
   currentTeam = 0;
   teamData = [{ strikeStreak: 0 }, { strikeStreak: 0 }];
   turnCounts = [0, 0];
+  finishedTeams = [];  // ✨ 완주 팀 초기화
+  isMissionActive = false;  // ✨ 미션 상태 초기화
   document.getElementById('winOverlay').classList.remove('show');
   document.getElementById('overlay').classList.remove('show');
   buildBoard();
